@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { useQuery } from 'react-query';
+import toast from 'react-hot-toast';
 import { api } from '../../../api/config';
 import { useTheme } from '../../../context/ThemeContext';
+import { useCart } from '../../../context/CartContext';
 
 interface Product {
   productId: number;
@@ -28,6 +30,7 @@ export default function Products() {
   const [showModal, setShowModal] = useState(false);
   const { data: products, isLoading, error } = useQuery('products', fetchProducts);
   const { darkMode } = useTheme();
+  const { addItem } = useCart();
 
   const filteredProducts = products?.filter(
     (product) =>
@@ -52,12 +55,31 @@ export default function Products() {
   const handleAddToCart = (productId: number) => {
     const quantity = quantities[productId] || 0;
     if (quantity > 0) {
-      // TODO: Implement cart functionality
-      alert(`Added ${quantity} items to cart`);
-      setQuantities((prev) => ({
-        ...prev,
-        [productId]: 0,
-      }));
+      const product = products?.find((p) => p.productId === productId);
+      if (product) {
+        try {
+          addItem(
+            {
+              productId: product.productId,
+              name: product.name,
+              price: product.price,
+              imageUrl: product.imgName,
+              sku: product.sku,
+            },
+            quantity
+          );
+          toast.success(`Added ${quantity} ${product.name} to cart`, {
+            duration: 3000,
+          });
+          setQuantities((prev) => ({
+            ...prev,
+            [productId]: 0,
+          }));
+        } catch (error) {
+          toast.error('Failed to add item to cart');
+          console.error('Error adding to cart:', error);
+        }
+      }
     }
   };
 
