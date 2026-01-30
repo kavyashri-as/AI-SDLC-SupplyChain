@@ -1,27 +1,72 @@
 name: Playwright Tests
+
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
+
 jobs:
   test:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    env:
+      VITE_PORT: 5137  # Ensure frontend runs on the same port as baseURL
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
     steps:
     - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
       with:
-        node-version: lts/*
+        node-version: '18'  # Based on package.json engines
+        cache: 'npm'
     - name: Install dependencies
       run: npm ci
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
+    - name: Build and start backend
+      run: |
+        cd supply-chain-system/api
+        npm ci
+        npm run build
+        npm start &
+    - name: Start frontend
+      run: |
+        cd supply-chain-system/frontend
+        npm ci
+        npm run dev &
+    - name: Wait for services to be ready
+      run: |
+        timeout 60 bash -c 'until curl -f http://localhost:5137 > /dev/null 2>&1; do sleep 2; done'
     - name: Run Playwright tests
-      run: npx playwright test
+      run: |
+        cd supply-chain-system/frontend
+        npx playwright test --project=${{ matrix.browser }}
     - uses: actions/upload-artifact@v4
-      if: ${{ !cancelled() }}
+      if: always()
       with:
-        name: playwright-report
-        path: playwright-report/
+        name: playwright-report-${{ matrix.browser }}
+        path: supply-chain-system/frontend/playwright-report/
         retention-days: 30
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ matrix.browser }}
+        path: supply-chain-system/frontend/test-results/
+        retention-days: 30
+    - name: Comment on PR with results
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { exec } = require('child_process');
+          exec('cd supply-chain-system/frontend && npx playwright show-report --reporter=github', (error, stdout, stderr) => {
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Playwright Test Results (${{ matrix.browser }})\n\n${stdout || 'No report generated.'}`
+            });
+          });
