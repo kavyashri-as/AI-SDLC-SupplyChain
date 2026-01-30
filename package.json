@@ -1,0 +1,17 @@
+{
+  "devDependencies": {
+    "@cucumber/cucumber": "^12.6.0",
+    "@cucumber/pretty-formatter": "^2.4.1",
+    "@types/node": "^22.19.7",
+    "baseline-browser-mapping": "^2.9.19",
+    "dotenv": "^16.6.1",
+    "multiple-cucumber-html-reporter": "^3.9.3",
+    "ts-node": "^10.9.2",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "react-hot-toast": "^2.4.1"
+  },
+  "scripts": {}
+}

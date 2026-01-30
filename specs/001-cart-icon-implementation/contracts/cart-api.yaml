@@ -1,0 +1,230 @@
+openapi: 3.0.3
+info:
+  title: Cart API
+  description: Cart management API for OctoCAT Supply Chain System
+  version: 1.0.0
+  contact:
+    name: OctoCAT Development Team
+
+servers:
+  - url: http://localhost:3001/api
+    description: Development server
+
+paths:
+  /cart:
+    get:
+      summary: Get current cart contents
+      description: Retrieve the current user's cart items and session information
+      operationId: getCart
+      responses:
+        '200':
+          description: Cart retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetCartResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Clear cart contents
+      description: Remove all items from the current cart session
+      operationId: clearCart
+      responses:
+        '200':
+          description: Cart cleared successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClearCartResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /cart/items:
+    post:
+      summary: Add item to cart
+      description: Add a product to the cart or update quantity if already exists
+      operationId: addCartItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCartItemRequest'
+      responses:
+        '200':
+          description: Item added to cart successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddCartItemResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    CartItem:
+      type: object
+      required:
+        - productId
+        - name
+        - price
+        - quantity
+      properties:
+        productId:
+          type: integer
+          description: Unique product identifier
+          example: 1
+        name:
+          type: string
+          description: Product name
+          example: "Premium Widget"
+        price:
+          type: number
+          format: float
+          description: Unit price
+          example: 29.99
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 50
+          description: Quantity in cart
+          example: 2
+        imageUrl:
+          type: string
+          format: uri
+          description: Product image URL
+          example: "https://example.com/images/widget.jpg"
+        sku:
+          type: string
+          description: Stock keeping unit
+          example: "WID-001"
+
+    AddCartItemRequest:
+      type: object
+      required:
+        - productId
+      properties:
+        productId:
+          type: integer
+          description: Product to add to cart
+          example: 1
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 1
+          description: Quantity to add
+          example: 1
+        sessionId:
+          type: string
+          description: Optional cart session identifier
+          example: "sess_123456"
+
+    AddCartItemResponse:
+      type: object
+      required:
+        - success
+        - sessionId
+        - itemCount
+        - total
+      properties:
+        success:
+          type: boolean
+          example: true
+        sessionId:
+          type: string
+          description: Cart session identifier
+          example: "sess_123456"
+        itemCount:
+          type: integer
+          description: Total number of items in cart
+          example: 3
+        total:
+          type: number
+          format: float
+          description: Total cart value
+          example: 89.97
+
+    GetCartResponse:
+      type: object
+      required:
+        - sessionId
+        - items
+        - itemCount
+        - total
+        - lastUpdated
+      properties:
+        sessionId:
+          type: string
+          description: Cart session identifier
+          example: "sess_123456"
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+        itemCount:
+          type: integer
+          description: Total number of items in cart
+          example: 3
+        total:
+          type: number
+          format: float
+          description: Total cart value
+          example: 89.97
+        lastUpdated:
+          type: string
+          format: date-time
+          description: Last cart modification timestamp
+          example: "2026-01-30T10:30:00Z"
+
+    ClearCartResponse:
+      type: object
+      required:
+        - success
+        - sessionId
+      properties:
+        success:
+          type: boolean
+          example: true
+        sessionId:
+          type: string
+          description: Cart session identifier
+          example: "sess_123456"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error type
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid product ID"
+        details:
+          type: object
+          description: Additional error details
+          example: { "field": "productId", "value": "abc" }
